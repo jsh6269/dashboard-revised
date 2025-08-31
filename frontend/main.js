@@ -33,7 +33,20 @@ function addItem() {
 
 function searchItems() {
   const query = document.getElementById("query").value;
-  alert(`아직 검색 기능이 구현되지 않았습니다.\nquery=${query}`);
+  fetch(`${baseurl}/search?query=${encodeURIComponent(query)}`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (Array.isArray(data.results)) {
+        renderResults(data.results);
+      } else {
+        renderResults([]);
+      }
+    })
+    .catch((err) => {
+      document.getElementById(
+        "result"
+      ).innerHTML = `<p style='color:red;'>Error: ${err}</p>`;
+    });
 }
 
 function formatDateTime(isoStr) {
