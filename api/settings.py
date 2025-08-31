@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     db_password: str = Field(validation_alias="DB_PASSWORD")
     db_name: str = Field(validation_alias="DB_NAME")
 
+    # Elasticsearch
+    es_host: str = Field("localhost", validation_alias="ES_HOST")
+    es_port: str = Field("9200", validation_alias="ES_PORT")
+
     # Pydantic v2 config
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE), env_file_encoding="utf-8", extra="ignore"

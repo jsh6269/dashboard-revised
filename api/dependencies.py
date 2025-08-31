@@ -8,8 +8,11 @@ from schemas import DashboardItemCreate
 def parse_dashboard_form(
     title: str = Form(...),
     description: str | None = Form(None),
-    image: UploadFile | None = File(None),
+    image: UploadFile | str | None = File(None),
 ) -> Tuple[DashboardItemCreate, UploadFile | None]:
     """multipart/form-data -> (DashboardItemCreate, UploadFile|None)"""
+
+    if image == "":
+        image = None
 
     return DashboardItemCreate(title=title, description=description), image

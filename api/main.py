@@ -5,12 +5,13 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from dependencies import parse_dashboard_form
-from fastapi import Depends, FastAPI, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from models import Base, DashboardItem
-from schemas import DashboardItemCreate, DashboardItemResponse
+from schemas import DashboardItemCreate, DashboardItemResponse, SearchResults
+from search_service import SearchService
 from settings import Settings
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -28,21 +29,20 @@ AsyncSessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSes
 async def lifespan(app: FastAPI):
     """애플리케이션의 생명주기를 관리한다.
 
-    애플리케이션 시작 시 데이터베이스 테이블을 생성
-    종료 시에는 별도의 정리 작업을 수행하지 않음
-    연결 풀은 SQLAlchemy engine이 자동으로 관리
-
     Args:
         app (FastAPI): FastAPI 애플리케이션 인스턴스
 
     Yields:
         None: 컨텍스트가 유지되는 동안 애플리케이션 실행
     """
+    app.state.search = SearchService(settings.es_host, settings.es_port)
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     yield
     # 종료 시 정리 작업이 필요하면 여기에 추가
+    app.state.search.close()
 
 
 async def save_upload_file(upload_file: UploadFile, destination: str):
@@ -75,6 +75,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # API 엔드포인트
 @app.post("/items", response_model=DashboardItemResponse, status_code=201)
 async def create_item(
+    request: Request,
     payload_and_image: tuple[DashboardItemCreate, UploadFile | None] = Depends(
         parse_dashboard_form
     ),
@@ -105,6 +106,17 @@ async def create_item(
         # DB에서 자동 생성된 ID 등을 로드
         await session.refresh(db_item)
 
+        es_doc = {
+            "title": payload.title,
+            "description": payload.description,
+            "created_at": now_utc.isoformat(),
+        }
+        if saved_path:
+            es_doc["image_path"] = saved_path
+
+        # Elasticsearch 색인
+        request.app.state.search.index_item(db_item.id, es_doc)
+
         return DashboardItemResponse(
             id=db_item.id,
             title=db_item.title,
@@ -112,3 +124,21 @@ async def create_item(
             image_path=db_item.image_path,
             created_at=db_item.created_at,
         )
+
+
+@app.get("/search", response_model=SearchResults)
+async def search_items(query: str, request: Request):
+    """Elasticsearch에서 아이템 검색"""
+
+    # Cache miss -> query Elasticsearch
+    try:
+        result = await run_in_threadpool(request.app.state.search.search_items, query)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    hits = []
+    for hit in result:
+        src = hit.get("_source", {})
+        hits.append(DashboardItemResponse(**src, id=int(hit.get("_id", 0))))
+
+    return SearchResults(results=hits)
