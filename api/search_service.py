@@ -9,7 +9,7 @@ class SearchService:
     INDEX_NAME = "dashboard_items"
 
     def __init__(self, host: str = "localhost", port: str = "9200") -> None:
-        self.es = Elasticsearch([f"http://{host}:{port}"])
+        self.es = Elasticsearch(f"http://{host}:{port}")
         self._ensure_index()
 
     # private method

@@ -50,7 +50,8 @@ function searchItems() {
 }
 
 function formatDateTime(isoStr) {
-  const _datetime = new Date(isoStr + "Z");
+  const isoWithZ = isoStr.endsWith("Z") ? isoStr : isoStr + "Z";
+  const _datetime = new Date(isoWithZ);
 
   const year = _datetime.getFullYear();
   const month = String(_datetime.getMonth() + 1).padStart(2, "0");
