@@ -9,7 +9,11 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
+    env:
+      DB_USER: "test_user"
+      DB_PASSWORD: "test_password"
+      DB_NAME: "test_db"
+      REDIS_PASSWORD: "test_password"
     steps:
       - uses: actions/checkout@v4
 
