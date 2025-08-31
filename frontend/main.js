@@ -1,5 +1,7 @@
 // main.js
 
+const baseurl = "http://localhost:8000";
+
 function addItem() {
   const title = document.getElementById("title").value;
   const description = document.getElementById("desc").value;
@@ -14,11 +16,19 @@ function addItem() {
     formData.append("image", fileInput.files[0]);
   }
 
-  const now = new Date();
-  formData.append("created_at", now.toISOString());
-
-  const newItem = Object.fromEntries(formData.entries());
-  renderResults([newItem]);
+  fetch(`${baseurl}/items`, {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      renderResults([data]);
+    })
+    .catch((err) => {
+      document.getElementById(
+        "result"
+      ).innerHTML = `<p style='color:red;'>Error: ${err}</p>`;
+    });
 }
 
 function searchItems() {
@@ -27,31 +37,16 @@ function searchItems() {
 }
 
 function formatDateTime(isoStr) {
-  const _datetime = new Date(isoStr);
-  if (isNaN(_datetime)) return isoStr;
+  const _datetime = new Date(isoStr + "Z");
 
-  const pad = (n) => String(n).padStart(2, "0");
+  const year = _datetime.getFullYear();
+  const month = String(_datetime.getMonth() + 1).padStart(2, "0");
+  const date = String(_datetime.getDate()).padStart(2, "0");
+  const hour = String(_datetime.getHours()).padStart(2, "0");
+  const minute = String(_datetime.getMinutes()).padStart(2, "0");
+  const second = String(_datetime.getSeconds()).padStart(2, "0");
 
-  const year = _datetime.getUTCFullYear();
-  const month = _datetime.getUTCMonth();
-  const date = _datetime.getUTCDate();
-  const hours = _datetime.getUTCHours() + 9;
-  const minutes = _datetime.getUTCMinutes();
-  const seconds = _datetime.getUTCSeconds();
-
-  // UTC+0 시간을 한국 시간(UTC+9)로 변환하면서 24시를 넘어가는 경우를 보정하기 위해 다시 Date로 감싸기
-  const adjustedDate = new Date(
-    Date.UTC(year, month, date, hours, minutes, seconds)
-  );
-
-  return (
-    `${adjustedDate.getUTCFullYear()}-${pad(
-      adjustedDate.getUTCMonth() + 1
-    )}-${pad(adjustedDate.getUTCDate())} ` +
-    `${pad(adjustedDate.getUTCHours())}:${pad(
-      adjustedDate.getUTCMinutes()
-    )}:${pad(adjustedDate.getUTCSeconds())}`
-  );
+  return `${year}-${month}-${date} ${hour}:${minute}:${second}`;
 }
 
 function renderResults(items) {

@@ -19,6 +19,16 @@ services:
     volumes:
       - ./api/uploads:/app/uploads
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_service
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
   db:
     image: mysql:8.0
     container_name: dashboard_mysql_service
