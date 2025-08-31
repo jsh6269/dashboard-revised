@@ -1,6 +1,24 @@
 # docker-compose.yml
 
 services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: dashboard_api_service
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    volumes:
+      - ./api/uploads:/app/uploads
+
   db:
     image: mysql:8.0
     container_name: dashboard_mysql_service
@@ -14,25 +32,18 @@ services:
       MYSQL_ROOT_HOST: "%"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    # MySQL이 실제로 연결 가능한 상태인지 확인
     healthcheck:
       test:
         [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-uroot",
-          "-p${MYSQL_ROOT_PASSWORD}",
+          "CMD-SHELL",
+          "mysql -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} -e 'SELECT 1'",
         ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
       start_period: 30s
     restart: unless-stopped
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --default-authentication-plugin=caching_sha2_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 
 volumes:
   mysql_data:
