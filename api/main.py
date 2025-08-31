@@ -4,6 +4,8 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
+import orjson
+import redis.asyncio as redis
 from dependencies import parse_dashboard_form
 from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
@@ -36,6 +38,28 @@ async def lifespan(app: FastAPI):
         None: 컨텍스트가 유지되는 동안 애플리케이션 실행
     """
     app.state.search = SearchService(settings.es_host, settings.es_port)
+
+    try:
+        redis_kwargs = {
+            "host": settings.redis_host,
+            "port": settings.redis_port,
+            "password": settings.redis_password,
+            "decode_responses": False,
+            "socket_connect_timeout": 0.1,
+            "socket_timeout": 0.1,
+        }
+
+        app.state.redis = redis.Redis(**redis_kwargs)
+
+        # ping test
+        try:
+            await app.state.redis.ping()
+        except Exception as e:
+            print(f"Redis 연결 실패: {e}")
+            app.state.redis = None
+    except Exception as e:
+        print(f"Redis 초기화 실패: {e}")
+        app.state.redis = None
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -130,9 +154,29 @@ async def create_item(
 async def search_items(query: str, request: Request):
     """Elasticsearch에서 아이템 검색"""
 
+    cache_key = f"search:{query}"
+    redis_client = getattr(request.app.state, "redis", None)
+
+    # Attempt to fetch from cache first
+    if redis_client is not None:
+        try:
+            cached = await redis_client.get(cache_key)
+        except Exception:
+            cached = None
+        if cached:
+            try:
+                cached_data = orjson.loads(cached)
+                hits = [DashboardItemResponse(**item) for item in cached_data]
+                print(f"Cache hit for query: {query}", flush=True)
+                return SearchResults(results=hits)
+            except Exception:
+                # Corrupted cache; ignore and proceed to fresh search
+                pass
+
     # Cache miss -> query Elasticsearch
     try:
         result = await run_in_threadpool(request.app.state.search.search_items, query)
+        print(f"Cache miss for query: {query}", flush=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -140,5 +184,16 @@ async def search_items(query: str, request: Request):
     for hit in result:
         src = hit.get("_source", {})
         hits.append(DashboardItemResponse(**src, id=int(hit.get("_id", 0))))
+
+    # Store in Redis cache for 15 seconds
+    if redis_client is not None:
+        try:
+            await redis_client.set(
+                cache_key,
+                orjson.dumps([h.model_dump(mode="python") for h in hits]),
+                ex=15,  # seconds
+            )
+        except Exception:
+            pass
 
     return SearchResults(results=hits)
