@@ -14,3 +14,30 @@ uvicorn main:app --reload
 아래와 같은 에러 발생하는 것을 확인
 sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (2003, "Can't connect to MySQL server on 'localhost'")
 (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+- 아래 명령어 입력
+docker compose up --build -d
+uvicorn main:app --reload (cd api한 상태에서)
+
+아래 주소를 구경하기
+http://127.0.0.1:8000/redoc
+http://127.0.0.1:8000/docs
+
+docs에서 create item을 이미지 첨부해서 실행해보기
+로컬 폴더 api/uploads에 이미지가 저장되는 것을 확인하기
+
+docker desktop의 exec에서
+mysql -u root -p
+mysql -u dashboard_user_1234 -p
+이걸로 접속해보기
+
+show databases;
+use dashboard_db;
+show tables;
+select * from dashboard_items;
+
+docker desktop 상에서 dashboard_mysql_service를 중지하고 삭제하기
+다시 docker compose up --build -d 실행
+위의 과정을 반복해서 row가 남아있음을 확인
+
+volumes/dashboard_mysql_data/dashboard_db/dashboard_items.ibd를 보고 컨테이너를 삭제해도 볼륨 안에 데이터가 저장되어 있음을 확인
