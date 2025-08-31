@@ -41,3 +41,6 @@ docker desktop 상에서 dashboard_mysql_service를 중지하고 삭제하기
 위의 과정을 반복해서 row가 남아있음을 확인
 
 volumes/dashboard_mysql_data/dashboard_db/dashboard_items.ibd를 보고 컨테이너를 삭제해도 볼륨 안에 데이터가 저장되어 있음을 확인
+
+pre-commit install
+pre-commit run --all-files

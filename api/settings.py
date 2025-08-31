@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,6 +10,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 ENV_FILE = PROJECT_ROOT / ".env"
 
 load_dotenv(ENV_FILE, override=True)
+
 
 class Settings(BaseSettings):
     """backend 공통 설정을 환경변수와 .env로부터 읽음"""
@@ -21,9 +23,7 @@ class Settings(BaseSettings):
 
     # Pydantic v2 config
     model_config = SettingsConfigDict(
-        env_file=str(ENV_FILE), 
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=str(ENV_FILE), env_file_encoding="utf-8", extra="ignore"
     )
 
     @property

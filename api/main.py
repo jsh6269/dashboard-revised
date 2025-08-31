@@ -2,21 +2,18 @@ import os
 import shutil
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from dependencies import parse_dashboard_form
 from fastapi import Depends, FastAPI, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from models import Base, DashboardItem
-from schemas import (
-    DashboardItemCreate,
-    DashboardItemResponse,
-)
+from schemas import DashboardItemCreate, DashboardItemResponse
 from settings import Settings
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timezone
-from fastapi.concurrency import run_in_threadpool
 
 # 설정 및 데이터베이스 초기화
 settings = Settings()
@@ -50,9 +47,11 @@ async def lifespan(app: FastAPI):
 
 async def save_upload_file(upload_file: UploadFile, destination: str):
     """비동기적으로 업로드된 파일을 지정된 경로에 저장"""
+
     def write_file():
         with open(destination, "wb") as buffer:
             shutil.copyfileobj(upload_file.file, buffer)
+
     await run_in_threadpool(write_file)
     upload_file.file.close()
 

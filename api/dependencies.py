@@ -11,5 +11,5 @@ def parse_dashboard_form(
     image: UploadFile | None = File(None),
 ) -> Tuple[DashboardItemCreate, UploadFile | None]:
     """multipart/form-data -> (DashboardItemCreate, UploadFile|None)"""
-    
+
     return DashboardItemCreate(title=title, description=description), image
