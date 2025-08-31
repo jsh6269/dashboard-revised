@@ -1,2 +1,16 @@
 - Go Live 서버를 이용해서 frontend 실행시켜보기
   아직 이미지를 저장하는 로직이 없기 때문에 이미지가 표시되지 않음
+
+- .env에 아래를 적기
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=password
+DB_NAME=dashboard_db
+
+- 아래 명령어 입력
+cd api
+uvicorn main:app --reload
+
+아래와 같은 에러 발생하는 것을 확인
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (2003, "Can't connect to MySQL server on 'localhost'")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
