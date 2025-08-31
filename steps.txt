@@ -47,3 +47,7 @@ pre-commit run --all-files
 
 - Elasticsearch 추가 후 아래 명령어 실행
 docker compose up -d --no-deps --build api
+
+- pytest
+cd api
+python -m pytest -vv tests/

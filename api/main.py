@@ -150,7 +150,7 @@ async def create_item(
         )
 
 
-@app.get("/search", response_model=SearchResults)
+@app.get("/search", response_model=SearchResults, status_code=200)
 async def search_items(query: str, request: Request):
     """Elasticsearch에서 아이템 검색"""
 
